@@ -13,6 +13,9 @@ import torch
 import torch.nn as nn
 from ding.torch_utils import MLP, ResBlock
 from ding.utils import SequenceType
+from torchvision.models.inception import BasicConv2d
+
+import copy
 
 
 # use dataclass to make the output of network more convenient to use
@@ -130,6 +133,117 @@ class DownSample(nn.Module):
         return output
 
 
+class ResNetRepresentationNetwork(nn.Module):
+    def __init__(self, input_images=4) -> None:
+        super().__init__()
+        
+        resnet = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False)
+
+        self.conv1 = torch.nn.Conv2d(4, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        self.bn1 = resnet.bn1
+        self.relu = resnet.relu
+        self.maxpool = resnet.maxpool
+        self.layer1 = resnet.layer1
+        self.layer2 = resnet.layer2
+        self.layer3 = resnet.layer3
+        # self.layer4 = resnet.layer4
+
+        self.downsample = torch.nn.Conv2d(in_channels=256, out_channels=64, kernel_size=1)
+
+        for param in self.parameters():
+            param.requires_grad_(True)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        # x = self.layer4(x)
+
+        # print(x.shape)
+        x = self.downsample(x)
+
+        return x
+
+
+class InceptionRepresentationNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        inceptionNet = torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=False)
+
+        self.Conv2d_1a_3x3 = BasicConv2d(4, 32, kernel_size=3, stride=2)
+        self.Conv2d_2a_3x3 = inceptionNet.Conv2d_2a_3x3 
+        self.Conv2d_2b_3x3 = inceptionNet.Conv2d_2b_3x3 
+        self.maxpool1 = inceptionNet.maxpool1 
+        self.Conv2d_3b_1x1 = inceptionNet.Conv2d_3b_1x1 
+        self.Conv2d_4a_3x3 = inceptionNet.Conv2d_4a_3x3 
+        self.maxpool2 = inceptionNet.maxpool2
+        self.Mixed_5b = inceptionNet.Mixed_5b 
+        self.Mixed_5c = inceptionNet.Mixed_5c 
+        self.Mixed_5d = inceptionNet.Mixed_5d 
+        self.Mixed_6a = inceptionNet.Mixed_6a 
+        self.Mixed_6b = inceptionNet.Mixed_6b 
+        self.Mixed_6c = inceptionNet.Mixed_6c 
+        self.Mixed_6d = inceptionNet.Mixed_6d 
+        self.Mixed_6e = inceptionNet.Mixed_6e 
+        self.Mixed_7a = inceptionNet.Mixed_7a 
+        self.Mixed_7b = inceptionNet.Mixed_7b
+        self.Mixed_7c = inceptionNet.Mixed_7c
+
+        self.downsample = nn.Conv2d(2048, 64, kernel_size=1)
+
+        for param in self.parameters():
+            param.requires_grad_(True)
+
+    def forward(self, x):
+        x = torch.nn.functional.interpolate(x, [256, 256])
+        # N x 3 x 299 x 299
+        x = self.Conv2d_1a_3x3(x)
+        # N x 32 x 149 x 149
+        x = self.Conv2d_2a_3x3(x)
+        # N x 32 x 147 x 147
+        x = self.Conv2d_2b_3x3(x)
+        # N x 64 x 147 x 147
+        x = self.maxpool1(x)
+        # N x 64 x 73 x 73
+        x = self.Conv2d_3b_1x1(x)
+        # N x 80 x 73 x 73
+        x = self.Conv2d_4a_3x3(x)
+        # N x 192 x 71 x 71
+        x = self.maxpool2(x)
+        # N x 192 x 35 x 35
+        x = self.Mixed_5b(x)
+        # N x 256 x 35 x 35
+        x = self.Mixed_5c(x)
+        # N x 288 x 35 x 35
+        x = self.Mixed_5d(x)
+        # N x 288 x 35 x 35
+        x = self.Mixed_6a(x)
+        # N x 768 x 17 x 17
+        x = self.Mixed_6b(x)
+        # N x 768 x 17 x 17
+        x = self.Mixed_6c(x)
+        # N x 768 x 17 x 17
+        x = self.Mixed_6d(x)
+        # N x 768 x 17 x 17
+        x = self.Mixed_6e(x)
+        # N x 768 x 17 x 17
+        x = self.Mixed_7a(x)
+        # N x 1280 x 8 x 8
+        x = self.Mixed_7b(x)
+        # N x 2048 x 8 x 8
+        x = self.Mixed_7c(x)
+        # N x 64 x 6 x 6
+        x = self.downsample(x)
+        return x
+    
+
 class RepresentationNetwork(nn.Module):
 
     def __init__(
@@ -158,6 +272,8 @@ class RepresentationNetwork(nn.Module):
         """
         super().__init__()
         assert norm_type in ['BN', 'LN'], "norm_type must in ['BN', 'LN']"
+
+        print(observation_shape)
 
         self.downsample = downsample
         if self.downsample:
@@ -195,6 +311,7 @@ class RepresentationNetwork(nn.Module):
             - output (:obj:`torch.Tensor`): :math:`(B, C_out, W_, H_)`, where B is batch size, C_out is channel, W_ is \
                 output width, H_ is output height.
         """
+        print(x.shape)
         if self.downsample:
             x = self.downsample_net(x)
         else:

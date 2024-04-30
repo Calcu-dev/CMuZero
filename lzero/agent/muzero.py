@@ -162,6 +162,7 @@ class MuZeroAgent:
         policy_config = self.cfg.policy
         batch_size = policy_config.batch_size
         # specific game buffer for MCTS+RL algorithms
+        print(policy_config)
         replay_buffer = MuZeroGameBuffer(policy_config)
         collector = Collector(
             env=collector_env,

@@ -21,7 +21,10 @@ if __name__ == "__main__":
 
     # model_path is the path to the trained MuZero model checkpoint.
     # If no path is provided, the script will use the default model.
-    model_path = None
+    # Inception
+    model_path = '/home/deep-learning/AdamLightZero/data_mz_ctree/inception/Qbert_muzero_ns50_upc1000_rr0.0_ddp_2gpu_seed0/ckpt/ckpt_best.pth.tar'
+    # Resnet
+    # model_path = '/home/deep-learning/AdamLightZero/data_mz_ctree/resnet/Qbert_muzero_ns50_upc1000_rr0.0_ddp_2gpu_seed0/ckpt/ckpt_best.pth.tar'
 
     # seeds is a list of seed values for the random number generator, used to initialize the environment.
     seeds = [0]
@@ -44,7 +47,7 @@ if __name__ == "__main__":
     # The path where the recorded video will be saved.
     main_config.env.replay_path = './video'
     # The maximum number of steps for each episode during evaluation. This may need to be adjusted based on the specific characteristics of the environment.
-    main_config.env.eval_max_episode_steps = int(20)
+    main_config.env.eval_max_episode_steps = int(1e6)
 
     # These lists will store the mean and total rewards for each seed.
     returns_mean_seeds = []

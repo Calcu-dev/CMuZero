@@ -11,7 +11,7 @@ from ding.torch_utils import MLP, ResBlock
 from ding.utils import MODEL_REGISTRY, SequenceType
 from numpy import ndarray
 
-from .common import MZNetworkOutput, RepresentationNetwork, PredictionNetwork
+from .common import MZNetworkOutput, RepresentationNetwork, PredictionNetwork, ResNetRepresentationNetwork, InceptionRepresentationNetwork
 from .utils import renormalize, get_params_mean, get_dynamic_mean, get_reward_mean
 
 
@@ -132,14 +132,20 @@ class MuZeroModel(nn.Module):
             (policy_head_channels * observation_shape[1] * observation_shape[2])
         )
 
-        self.representation_network = RepresentationNetwork(
-            observation_shape,
-            num_res_blocks,
-            num_channels,
-            downsample,
-            activation=activation,
-            norm_type=norm_type
-        )
+        # self.representation_network = RepresentationNetwork(
+        #     observation_shape,
+        #     num_res_blocks,
+        #     num_channels,
+        #     downsample,
+        #     activation=activation,
+        #     norm_type=norm_type
+        # )
+
+        # self.representation_network = ResNetRepresentationNetwork(input_images=4)
+
+        self.representation_network = InceptionRepresentationNetwork()
+        print("Inception Double!")
+        
         self.dynamics_network = DynamicsNetwork(
             observation_shape,
             self.action_encoding_dim,
